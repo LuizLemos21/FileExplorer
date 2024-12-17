@@ -1,7 +1,13 @@
-import Input, {InputSize} from "../../ui/Input";
-import {ChangeEvent, Dispatch, SetStateAction} from "react";
-import {ISearchFilter} from "./SearchBar";
-import { filter } from "lodash";
+import React, { ChangeEvent, Dispatch, SetStateAction, useEffect, useState } from "react";
+import Input, { InputSize } from "../../ui/Input";
+import { ISearchFilter } from "./SearchBar";
+import { invoke } from "@tauri-apps/api/tauri";
+
+interface Tag {
+    id: number;
+    name: string;
+    parent_id: number | null;
+}
 
 interface Props {
     filters: ISearchFilter;
@@ -9,31 +15,40 @@ interface Props {
 }
 
 export default function SearchFilter({ filters, setFilters }: Props) {
+    const [availableTags, setAvailableTags] = useState<Tag[]>([]); // State for dynamic tags
 
-    // tags hard-coded (SUBSTITUIR DEPOIS POR TAGS GERADAS DE FORMA DINÂMICA)
-    const availableTags = ["tag1","tag2","tag3","tag4","tag5","tag6"];
+    // Fetch tags from the backend
+    useEffect(() => {
+        const fetchTags = async () => {
+            try {
+                const fetchedTags: Tag[] = await invoke("get_tags_handler"); // Call the backend handler
+                setAvailableTags(fetchedTags);
+            } catch (error) {
+                console.error("Error fetching tags:", error);
+            }
+        };
 
-    // gerenciar mudanças na checkbox "Accept Files"
+        fetchTags();
+    }, []);
+
+    // Handle "Accept Files" checkbox
     function onAcceptFilesChange(e: ChangeEvent<HTMLInputElement>) {
-
-        //verifica se a checkbox está não marcada e "Accept Directiories" está marcada para previnir seleções conflitantes
         if (!e.target.checked && !filters.acceptDirectories) {
             setFilters({
                 ...filters,
                 acceptFiles: false,
-                acceptDirectories: true,  //Default, aceita diretórios
+                acceptDirectories: true,
             });
-
             return;
         }
 
-        // se a checkbox está marcada, atualiza o "Accept Files"
         setFilters({
             ...filters,
             acceptFiles: e.target.checked,
         });
     }
 
+    // Handle "Accept Folders" checkbox
     function onAcceptDirsChange(e: ChangeEvent<HTMLInputElement>) {
         if (!e.target.checked && !filters.acceptFiles) {
             setFilters({
@@ -41,7 +56,6 @@ export default function SearchFilter({ filters, setFilters }: Props) {
                 acceptDirectories: false,
                 acceptFiles: true,
             });
-
             return;
         }
 
@@ -51,24 +65,24 @@ export default function SearchFilter({ filters, setFilters }: Props) {
         });
     }
 
+    // Handle extension input changes
     function onExtensionChange(e: ChangeEvent<HTMLInputElement>) {
         setFilters({
             ...filters,
             extension: e.target.value,
-        })
+        });
     }
 
-    //Função para gerenciar a seleção ou deseleção de tags
-    function onTagChange(tag: string){
-        const updatedTags = filters.selectedTags.includes(tag)
-            ? filters.selectedTags.filter(t => t !== tag)
-            : [...filters.selectedTags, tag];
-        
-         setFilters({
+    // Handle tag selection or deselection
+    function onTagChange(tagName: string) {
+        const updatedTags = filters.selectedTags.includes(tagName)
+            ? filters.selectedTags.filter((t) => t !== tagName)
+            : [...filters.selectedTags, tagName];
+
+        setFilters({
             ...filters,
             selectedTags: updatedTags,
         });
-
     }
 
     return (
@@ -79,36 +93,47 @@ export default function SearchFilter({ filters, setFilters }: Props) {
                 <label>Folders</label>
                 <label>Tags</label>
 
-                {/* Renderiza as tags disponíveis como checkboxes */}
+                {/* Render dynamic tags */}
                 <div className="flex flex-col space-y-2">
-                    {availableTags.map(tag => (
-                        <div key = {tag} className = "flex items-center">
-                            <input 
-                                type="checkbox"
-                                checked={filters.selectedTags.includes(tag)}
-                                onChange={() => onTagChange(tag)}
-                                className="mr-2"
-                            />
-                            <span>{tag}</span>
-                   
-                        </div>
-                 ))}
-                 </div>
+                    {availableTags.length > 0 ? (
+                        availableTags.map((tag) => (
+                            <div key={tag.id} className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={filters.selectedTags.includes(tag.name)}
+                                    onChange={() => onTagChange(tag.name)}
+                                    className="mr-2"
+                                />
+                                <span>{tag.name}</span>
+                            </div>
+                        ))
+                    ) : (
+                        <span className="text-gray-400">No tags available</span>
+                    )}
+                </div>
             </div>
 
             <div className="flex flex-col space-y-2 relative">
-                <Input onChange={onExtensionChange} value={filters.extension} placeholder="ext" size={InputSize.Tiny} disabled={!filters.acceptFiles} />
+                <Input
+                    onChange={onExtensionChange}
+                    value={filters.extension}
+                    placeholder="ext"
+                    size={InputSize.Tiny}
+                    disabled={!filters.acceptFiles}
+                />
                 <input
                     checked={filters.acceptFiles}
                     onChange={onAcceptFilesChange}
-                    className="absolute left-2 top-8" type="checkbox"
+                    className="absolute left-2 top-8"
+                    type="checkbox"
                 />
                 <input
                     checked={filters.acceptDirectories}
                     onChange={onAcceptDirsChange}
-                    className="absolute left-2 top-16" type="checkbox"
+                    className="absolute left-2 top-16"
+                    type="checkbox"
                 />
             </div>
         </div>
-    )
+    );
 }
