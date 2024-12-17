@@ -14,6 +14,7 @@ export interface ISearchFilter {
   extension: string;
   acceptFiles: boolean;
   acceptDirectories: boolean;
+  selectedTags: string[];
 }
 
 export default function SearchBar({
@@ -26,6 +27,7 @@ export default function SearchBar({
     extension: "",
     acceptFiles: true,
     acceptDirectories: true,
+    selectedTags: [],
   });
 
   const [currentPlace, setCurrentPlace] = useState<string | undefined>();
