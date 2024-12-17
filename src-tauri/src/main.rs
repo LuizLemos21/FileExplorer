@@ -51,7 +51,8 @@ async fn main() {
             get_tags_handler,
             update_tag_handler,
             delete_tag_handler,
-            tag_file_handler
+            tag_file_handler,
+            get_tags_hierarchy_handler
         ])
         .manage(Arc::new(Mutex::new(AppState::default())))
         .run(tauri::generate_context!())
@@ -73,6 +74,10 @@ async fn get_tags_handler() -> Result<Vec<database::api::Tag>, String> {
     }
 }
 
+#[tauri::command]
+async fn get_tags_hierarchy_handler() -> Result<Vec<database::api::Tag>, String> {
+    database::api::get_tags_hierarchically().map_err(|e| e.to_string())
+}
 
 #[tauri::command]
 async fn update_tag_handler(tag_id: i32, new_name: String, parent_id: Option<i32>) -> Result<(), String> {

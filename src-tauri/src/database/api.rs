@@ -56,6 +56,24 @@ pub fn get_tags() -> Result<Vec<Tag>, ApiError> {
     Ok(tags)
 }
 
+//get tags hierarchialy 
+pub fn get_tags_hierarchically() -> Result<Vec<Tag>, ApiError> {
+    let conn = establish_connection()?;
+    let mut stmt = conn.prepare("SELECT id, name, parent_id FROM tags")?;
+    let tag_iter = stmt.query_map([], |row|{
+        Ok(Tag {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            parent_id: row.get(2)?,
+        })
+    })?;
+
+    let tags: Vec<Tag> = tag_iter.filter_map(Result::ok).collect();
+    Ok(tags)
+}
+
+
+
 // Update Tag
 pub fn update_tag(tag_id: i32, new_name: String, new_parent_id: Option<i32>) -> Result<(), ApiError> {
     let conn = establish_connection()?;
