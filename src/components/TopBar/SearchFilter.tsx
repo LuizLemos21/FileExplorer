@@ -63,7 +63,7 @@ export default function SearchFilter({ filters, setFilters }: Props) {
                 <input
                     type="checkbox"
                     checked={filters.selectedTags.includes(tag.name)}
-                    onChange={() => onTagChange(tag.name, tag.children || [])}
+                    onChange={() => onTagChange(tag)}
                     className="mr-2"
                 />
                 <span>{tag.name}</span>
@@ -115,19 +115,37 @@ export default function SearchFilter({ filters, setFilters }: Props) {
     }
 
     // Handle tag selection or deselection
-    const onTagChange = (tagName: string, childTags: Tag[]) => {
+    const onTagChange = (tag: Tag) => {
         let updatedTags = [...filters.selectedTags];
 
-        if (updatedTags.includes(tagName)) {
-            // Deselect tag and all its children
-            updatedTags = updatedTags.filter((tag) => tag !== tagName && !childTags.some((child) => child.name === tag));
+        //if the tag is already selected, desselect it and all its children
+        if (updatedTags.includes(tag.name)) {
+            updatedTags = updatedTags.filter((t) => !isTagOrDescendant(tag, t));
         } else {
-            // Select tag and all its children
-            updatedTags = [...updatedTags, tagName, ...childTags.map((child) => child.name)];
+            // If tag is not selected, select it and all its children
+            updatedTags = [...updatedTags, ...getAllDescendants(tag).map((t) => t.name)];
         }
 
         setFilters({ ...filters, selectedTags: updatedTags });
     };
+
+// Function to get all descendants of a tag
+const getAllDescendants = (tag: Tag): Tag[] => {
+    let descendants: Tag[] = [tag];
+    if (tag.children) {
+        tag.children.forEach((child) => {
+            descendants = [...descendants, ...getAllDescendants(child)];
+        });
+    }
+    return descendants;
+};
+
+// Function to check if a tag or one of its descendants is selected
+const isTagOrDescendant = (tag: Tag, selectedTag: string) => {
+    return tag.name === selectedTag || getAllDescendants(tag).some((descendant) => descendant.name === selectedTag);
+};
+
+
     return (
         <div className="space-x-2 flex justify-center bg-darker p-4 rounded-bl-lg rounded-br-lg w-62">
             <div className="flex flex-col space-y-2">
@@ -135,6 +153,7 @@ export default function SearchFilter({ filters, setFilters }: Props) {
                 <label>Files</label>
                 <label>Folders</label>
                 <label>Tags</label>
+
 
                 {/* Render hierarchical tags */}
                 <div className="flex flex-col space-y-2">
@@ -175,7 +194,9 @@ export default function SearchFilter({ filters, setFilters }: Props) {
                     type="checkbox"
                 />
             </div>
-        </div>
+        </div> 
+        
+
     );
 }
     
