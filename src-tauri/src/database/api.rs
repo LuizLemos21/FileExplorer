@@ -74,7 +74,7 @@ pub fn get_tags_hierarchically() -> Result<Vec<Tag>, ApiError> {
 
 
 
-// Update Tag
+// Update 
 pub fn update_tag(tag_id: i32, new_name: String, new_parent_id: Option<i32>) -> Result<(), ApiError> {
     let conn = establish_connection()?;
     let affected = conn.execute(

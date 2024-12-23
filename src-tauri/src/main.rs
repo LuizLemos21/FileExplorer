@@ -84,10 +84,12 @@ async fn update_tag_handler(tag_id: i32, new_name: String, parent_id: Option<i32
     update_tag(tag_id, new_name, parent_id).map_err(|e| e.to_string())
 }
 
+
 #[tauri::command]
 async fn delete_tag_handler(tag_id: i32) -> Result<(), String> {
     delete_tag(tag_id).map_err(|e| e.to_string())
 }
+
 
 #[tauri::command]
 async fn tag_file_handler(file_id: i32, tag_id: i32) -> Result<(), String> {
