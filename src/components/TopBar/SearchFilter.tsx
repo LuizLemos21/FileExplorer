@@ -1,9 +1,7 @@
-import React, { ChangeEvent, Dispatch, SetStateAction, useEffect, useState } from "react";
-import Input, { InputSize } from "../../ui/Input";
+import React, { Dispatch, SetStateAction } from "react";
+import TagList from "../Tags/TagList";
+import SearchBox from "./SearchBox";
 import { ISearchFilter } from "./SearchBar";
-import { invoke } from "@tauri-apps/api/tauri";
-import TagForm from '../Tags/TagForm';
-import TagList from '../Tags/TagList';
 
 interface Tag {
   id: number;
@@ -13,7 +11,7 @@ interface Tag {
 }
 
 interface Props {
-  filters: ISearchFilter;
+  filters: ISearchFilter; // Existing search filters
   setFilters: Dispatch<SetStateAction<ISearchFilter>>;
 }
 

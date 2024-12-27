@@ -41,10 +41,12 @@ const TagForm: React.FC<TagFormProps> = ({ tag, onClose, onSuccess }) => {
       <div>
         <label>Tag Name:</label>
         <input
-          type="text"
-          value={tagName}
-          onChange={(e) => setTagName(e.target.value)}
-        />
+        type="text"
+        value={tagName}
+        onChange={(e) => setTagName(e.target.value)}
+        style={{ color: "black", backgroundColor: "white", padding: "4px" }}
+      />
+
       </div>
 
       {/* Parent Tag Selection */}

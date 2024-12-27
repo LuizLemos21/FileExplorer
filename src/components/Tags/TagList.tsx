@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import TagForm from "../Tags/TagForm";
-import { invoke } from '@tauri-apps/api/tauri';
+import TagForm from "./TagForm";
+import ContextMenu from "../ContextMenus/ContextMenu";
+import { invoke } from "@tauri-apps/api/tauri";
 
 interface Tag {
   id: number;
@@ -19,11 +20,31 @@ interface Props {
 }
 
 const TagList: React.FC<Props> = ({ availableTags, filters, setFilters, refreshTagList }) => {
-  const [editingTag, setEditingTag] = useState<Tag | null>(null); // State for the tag being edited
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ mouseX: number; mouseY: number; tag: Tag } | null>(null);
+
+  const handleDelete = async (tagId: number) => {
+    if (window.confirm("Are you sure you want to delete this tag?")) {
+      try {
+        await invoke("delete_tag_handler", { tag_id: tagId });
+        await refreshTagList();
+      } catch (err) {
+        console.error("Error deleting tag:", err);
+        alert("Failed to delete tag.");
+      }
+    }
+  };
 
   const renderTags = (tags: Tag[], level = 0) => {
     return tags.map((tag) => (
-      <div key={tag.id} style={{ marginLeft: `${level * 20}px` }}>
+      <div
+        key={tag.id}
+        style={{ marginLeft: `${level * 20}px` }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setContextMenu({ mouseX: e.clientX, mouseY: e.clientY, tag });
+        }}
+      >
         <input
           type="checkbox"
           checked={filters.selectedTags.includes(tag.name)}
@@ -31,45 +52,33 @@ const TagList: React.FC<Props> = ({ availableTags, filters, setFilters, refreshT
           className="mr-2"
         />
         <span>{tag.name}</span>
-
-        {/* Update and Delete options */}
-        <button onClick={() => setEditingTag(tag)}>Update</button>
-        <button onClick={() => handleDelete(tag.id)}>Delete</button>
-
         {tag.children && renderTags(tag.children, level + 1)}
       </div>
     ));
   };
 
   const onTagChange = (tag: Tag) => {
-    // Logic for tag selection/deselection (unchanged from earlier implementation)
-  };
-
-  const handleDelete = async (tagId: number) => {
-    const confirmed = window.confirm("Are you sure you want to delete this tag?");
-    if (confirmed) {
-      try {
-        await invoke("delete_tag_handler", { tag_id: tagId });
-        await refreshTagList(); // Refresh tag list after deletion
-      } catch (err: any) {
-        console.error("Error deleting tag:", err);
-        alert("Failed to delete tag. Please try again.");
-      }
-    }
+    // Selection/deselection logic
   };
 
   return (
-    <div className="tag-list">
+    <div>
       {renderTags(availableTags)}
-
-      {/* Show TagForm for updating */}
+      {contextMenu && (
+        <ContextMenu
+          options={[
+            { name: "Update", onClick: () => setEditingTag(contextMenu.tag) },
+            { name: "Delete", onClick: () => handleDelete(contextMenu.tag.id) },
+          ]}
+        />
+      )}
       {editingTag && (
         <TagForm
-          tag={editingTag} // Pass the tag to edit
+          tag={editingTag}
           onClose={() => setEditingTag(null)}
           onSuccess={() => {
             setEditingTag(null);
-            refreshTagList(); // Refresh tag list after update
+            refreshTagList();
           }}
         />
       )}
