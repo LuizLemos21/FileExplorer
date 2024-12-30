@@ -2,6 +2,7 @@ import React, { ChangeEvent, Dispatch, SetStateAction, useEffect, useState } fro
 import Input, { InputSize } from "../../ui/Input";
 import { ISearchFilter } from "./SearchBar";
 import { invoke } from "@tauri-apps/api/tauri";
+import TagForm from '../Tags/TagForm';
 
 interface Tag {
     id: number;
@@ -16,61 +17,64 @@ interface Props {
 }
 
 export default function SearchFilter({ filters, setFilters }: Props) {
-    const [availableTags, setAvailableTags] = useState<Tag[]>([]); // State for dynamic hierachical tags
+    const [availableTags, setAvailableTags] = useState<Tag[]>([]); // State for dynamic hierarchical tags
+    const [showCreateForm, setShowCreateForm] = useState(false); // State for showing the Create Tag form
+    const [error, setError] = useState<string | null>(null); // State for error handling
 
     // Fetch tags from the backend
-    useEffect(() => {
-        const fetchTags = async () => {
-            try {
-                const fetchedTags: Tag[] = await invoke("get_tags_hierarchy_handler"); // Call the backend handler
-                setAvailableTags(buildTagHierarchy(fetchedTags));
-            } catch (error) {
-                console.error("Error fetching tags:", error);
-            }
-        };
+  const refreshTagList = async () => {
+    try {
+      const fetchedTags: Tag[] = await invoke("get_tags_hierarchy_handler"); // Call the backend handler
+      setAvailableTags(buildTagHierarchy(fetchedTags));
+      setError(null); // Clear error on success
+    } catch (err: any) {
+      console.error("Error fetching tags:", err);
+      setError("Failed to fetch tags. Please try again.");
+    }
+  };
 
-        fetchTags();
-    }, []);
+  useEffect(() => {
+    refreshTagList();
+  }, []);
 
-    //Build hierachichal structure from flat list
-    const buildTagHierarchy = (flatTags: Tag[]): Tag[] => {
-        const tagMap = new Map<number, Tag>();
 
-        flatTags.forEach((tag) =>  {
-            tagMap.set(tag.id, { ...tag, children: []});
-        
-        });
+    // Build hierarchical structure from flat list
+  const buildTagHierarchy = (flatTags: Tag[]): Tag[] => {
+    const tagMap = new Map<number, Tag>();
 
-        const rootTags: Tag[] = [];
+    flatTags.forEach((tag) => {
+      tagMap.set(tag.id, { ...tag, children: [] });
+    });
 
-        tagMap.forEach((tag) => {
-            if (tag.parent_id){
-                const parent = tagMap.get(tag.parent_id);
-                parent?.children?.push(tag);
-            } else {
-                rootTags.push(tag);
-            }
-        });
+    const rootTags: Tag[] = [];
 
-        return rootTags
-    };
+    tagMap.forEach((tag) => {
+      if (tag.parent_id) {
+        const parent = tagMap.get(tag.parent_id);
+        parent?.children?.push(tag);
+      } else {
+        rootTags.push(tag);
+      }
+    });
 
-    //Recursive function to render tags with identation
+    return rootTags;
+  };
 
-    const renderTags = (tags: Tag[], level = 0) => {
-        return tags.map((tag) => (
-            <div key={tag.id} style={{ marginLeft: `${level * 20}px` }}>
-                <input
-                    type="checkbox"
-                    checked={filters.selectedTags.includes(tag.name)}
-                    onChange={() => onTagChange(tag)}
-                    className="mr-2"
-                />
-                <span>{tag.name}</span>
-                {tag.children && renderTags(tag.children, level + 1)}
-            </div>
-        ));
-    };
+   // Recursive function to render tags with indentation
+  const renderTags = (tags: Tag[], level = 0) => {
+    return tags.map((tag) => (
+      <div key={tag.id} style={{ marginLeft: `${level * 20}px` }}>
+        <input
+          type="checkbox"
+          checked={filters.selectedTags.includes(tag.name)}
+          onChange={() => onTagChange(tag)}
+          className="mr-2"
+        />
+        <span>{tag.name}</span>
+        {tag.children && renderTags(tag.children, level + 1)}
+      </div>
+    ));
+  };
 
     // Handle "Accept Files" checkbox
     function onAcceptFilesChange(e: ChangeEvent<HTMLInputElement>) {
@@ -115,19 +119,19 @@ export default function SearchFilter({ filters, setFilters }: Props) {
     }
 
     // Handle tag selection or deselection
-    const onTagChange = (tag: Tag) => {
-        let updatedTags = [...filters.selectedTags];
+  const onTagChange = (tag: Tag) => {
+    let updatedTags = [...filters.selectedTags];
 
-        //if the tag is already selected, desselect it and all its children
-        if (updatedTags.includes(tag.name)) {
-            updatedTags = updatedTags.filter((t) => !isTagOrDescendant(tag, t));
-        } else {
-            // If tag is not selected, select it and all its children
-            updatedTags = [...updatedTags, ...getAllDescendants(tag).map((t) => t.name)];
-        }
+    // If the tag is already selected, deselect it and all its children
+    if (updatedTags.includes(tag.name)) {
+      updatedTags = updatedTags.filter((t) => !isTagOrDescendant(tag, t));
+    } else {
+      // If the tag is not selected, select it and all its children
+      updatedTags = [...updatedTags, ...getAllDescendants(tag).map((t) => t.name)];
+    }
 
-        setFilters({ ...filters, selectedTags: updatedTags });
-    };
+    setFilters({ ...filters, selectedTags: updatedTags });
+  };
 
 // Function to get all descendants of a tag
 const getAllDescendants = (tag: Tag): Tag[] => {
@@ -147,56 +151,72 @@ const isTagOrDescendant = (tag: Tag, selectedTag: string) => {
 
 
     return (
-        <div className="space-x-2 flex justify-center bg-darker p-4 rounded-bl-lg rounded-br-lg w-62">
-            <div className="flex flex-col space-y-2">
-                <label>Extension</label>
-                <label>Files</label>
-                <label>Folders</label>
-                <label>Tags</label>
+    <div className="space-x-2 flex justify-center bg-darker p-4 rounded-bl-lg rounded-br-lg w-62">
+      <div className="flex flex-col space-y-2">
+        <label>Extension</label>
+        <label>Files</label>
+        <label>Folders</label>
+        <label>Tags</label>
 
+        {/* Render hierarchical tags */}
+        <div className="flex flex-col space-y-2">
+          {availableTags.length > 0 ? (
+            renderTags(availableTags)
+          ) : (
+            <span className="text-gray-400">{error || "No tags available"}</span>
+          )}
+        </div>
+      </div>
 
-                {/* Render hierarchical tags */}
-                <div className="flex flex-col space-y-2">
-                    {availableTags.length > 0 ? renderTags(availableTags) : <span className="text-gray-400">No tags available</span>}
-                </div>
-            </div>
+      <div className="flex flex-col space-y-2 relative">
+        <Input
+          onChange={(e) => setFilters({ ...filters, extension: e.target.value })}
+          value={filters.extension}
+          placeholder="ext"
+          size={InputSize.Tiny}
+          disabled={!filters.acceptFiles}
+        />
+        <input
+          checked={filters.acceptFiles}
+          onChange={(e) =>
+            setFilters({
+              ...filters,
+              acceptFiles: e.target.checked,
+              acceptDirectories: !e.target.checked ? true : filters.acceptDirectories,
+            })
+          }
+          className="absolute left-2 top-8"
+          type="checkbox"
+        />
+        <input
+          checked={filters.acceptDirectories}
+          onChange={(e) =>
+            setFilters({
+              ...filters,
+              acceptDirectories: e.target.checked,
+              acceptFiles: !e.target.checked ? true : filters.acceptFiles,
+            })
+          }
+          className="absolute left-2 top-16"
+          type="checkbox"
+        />
+      </div>
 
-            <div className="flex flex-col space-y-2 relative">
-                <Input
-                    onChange={(e) => setFilters({ ...filters, extension: e.target.value })}
-                    value={filters.extension}
-                    placeholder="ext"
-                    size={InputSize.Tiny}
-                    disabled={!filters.acceptFiles}
-                />
-                <input
-                    checked={filters.acceptFiles}
-                    onChange={(e) =>
-                        setFilters({
-                            ...filters,
-                            acceptFiles: e.target.checked,
-                            acceptDirectories: !e.target.checked ? true : filters.acceptDirectories,
-                        })
-                    }
-                    className="absolute left-2 top-8"
-                    type="checkbox"
-                />
-                <input
-                    checked={filters.acceptDirectories}
-                    onChange={(e) =>
-                        setFilters({
-                            ...filters,
-                            acceptDirectories: e.target.checked,
-                            acceptFiles: !e.target.checked ? true : filters.acceptFiles,
-                        })
-                    }
-                    className="absolute left-2 top-16"
-                    type="checkbox"
-                />
-            </div>
-        </div> 
-        
+      {/* Create Tag Button */}
+      <button
+        onClick={() => setShowCreateForm(true)}
+        className="btn btn-primary mt-4"
+      >
+        Create New Tag
+      </button>
 
-    );
+      {/* Show the Create Tag Form */}
+      {showCreateForm && (
+        <TagForm
+          onClose={() => setShowCreateForm(false)}
+          onSuccess={() => refreshTagList()}
+        />
+      )}
+    </div>
+  );
 }
-    
