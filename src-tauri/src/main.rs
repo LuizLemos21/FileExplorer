@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use database::api::{create_tag, delete_tag, get_tags, tag_file, update_tag};
+use database::api::{create_tag, delete_tag, get_tags, register_file, tag_file, update_tag};
 use errors::ApiError;
 
 
@@ -89,7 +89,15 @@ async fn delete_tag_handler(tag_id: i32) -> Result<(), String> {
     delete_tag(tag_id).map_err(|e| e.to_string())
 }
 
+
 #[tauri::command]
-async fn tag_file_handler(file_id: i32, tag_id: i32) -> Result<(), String> {
-    tag_file(file_id, tag_id).map_err(|e| e.to_string())
+async fn register_file_handler(name: String, path: String) -> Result<i32, String> {
+    register_file(name, path).map_err(|e| e.to_string())
+
+}
+
+
+#[tauri::command]
+async fn tag_file_handler(name: String, path: String, tag_ids: Vec<i32>) -> Result<(), String> {
+    tag_file(name, path, tag_ids)
 }

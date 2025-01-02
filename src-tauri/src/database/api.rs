@@ -97,12 +97,78 @@ pub fn delete_tag(tag_id: i32) -> Result<(), ApiError> {
     Ok(())
 }
 
+//Registar um arquivo no banco
+
+pub fn register_file(name: String, path: String) -> Result<i32, String> {
+    let conn = establish_connection().map_err(|e| e.to_string())?; 
+        conn.execute(
+        "INSERT INTO files (name, path) VALUES (?1, ?2)",
+        &[&name, &path],
+    ).map_err(|e| e.to_string())?;
+
+    let last_id = conn.last_insert_rowid();
+    Ok(last_id as i32)
+}
+
 // Associate Tag with File
-pub fn tag_file(file_id: i32, tag_id: i32) -> Result<(), ApiError> {
-    let conn = establish_connection()?;
-    conn.execute(
-        "INSERT INTO tagged_files (file_id, tag_id) VALUES (?1, ?2)",
-        &[&file_id, &tag_id],
-    )?;
+pub fn tag_file(name: String, path: String, tag_ids: Vec<i32>) -> Result<(), String> {
+   let conn = establish_connection().map_err(|e| e.to_string())?; 
+
+    // Verificar se o arquivo já existe
+    let file_id: i32 = conn
+        .query_row(
+            "SELECT id FROM files WHERE path = ?1",
+            [&path],
+            |row| row.get(0),
+        )
+        .unwrap_or_else(|_| {
+            // Inserir o arquivo, se não existir
+            conn.execute(
+                "INSERT INTO files (name, path) VALUES (?1, ?2)",
+                [&name, &path],
+            )
+            .expect("Failed to insert file");
+            conn.last_insert_rowid() as i32
+        });
+
+    // Associar as tags ao arquivo
+    for tag_id in tag_ids {
+        conn.execute(
+            "INSERT OR IGNORE INTO tagged_files (file_id, tag_id) VALUES (?1, ?2)",
+            &[&file_id, &tag_id],
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
     Ok(())
+}
+
+
+// Pesquisar arquivos por Tags
+#[tauri::command]
+pub fn search_files_by_tags(tag_ids: Vec<i32>) -> Result<Vec<File>, String> {
+    let conn = establish_connection().map_err(|e| e.to_string())?;
+
+    let query = format!(
+        "SELECT DISTINCT f.id, f.name, f.file_path
+         FROM files f
+         INNER JOIN tagged_files tf ON f.id = tf.file_id
+         WHERE tf.tag_id IN ({})",
+        tag_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",")    
+    );
+
+    let params: Vec<&dyn rusqlite::ToSql> = tag_ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
+
+    let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
+    let file_iter = stmt
+        .query_map(params.as_slice(), |row| {            
+                Ok(File {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                file_path: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    Ok(file_iter.filter_map(Result::ok).collect())
 }

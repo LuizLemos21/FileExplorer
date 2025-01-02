@@ -25,3 +25,8 @@ h2 {
 progress[value] {
   background-color: blue;
 }
+
+input {
+  color: black !important;
+  background-color: white !important;
+}
