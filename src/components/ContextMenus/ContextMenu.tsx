@@ -20,13 +20,14 @@ export default function ContextMenu({ options }: Props) {
             position: "absolute",
             left: mouseX,
             top: mouseY,
+            zIndex:1000,
         }}>
             {options.map((option, idx) => (
                 <div key={idx} className="">
                     <button onClick={() => {
                         option.onClick();
                         dispatch(updateContextMenu(NO_CONTEXT_MENU));
-                    }} className="bg-darker hover:bg-bright w-full">{option.name}</button>
+                    }} className="bg-darker hover:bg-bright w-full ">{option.name}</button>
                     <br />
                 </div>
             ))}

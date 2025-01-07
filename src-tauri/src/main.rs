@@ -5,9 +5,11 @@ mod filesystem;
 mod search;
 mod errors;
 mod database;
+mod tagSearch;
 
 use filesystem::explorer::{open_file, open_directory, create_file, create_directory, rename_file, delete_file};
 use filesystem::volume::get_volumes;
+use rayon::result;
 use search::search_directory;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -101,3 +103,15 @@ async fn register_file_handler(name: String, path: String) -> Result<i32, String
 async fn tag_file_handler(name: String, path: String, tag_ids: Vec<i32>) -> Result<(), String> {
     tag_file(name, path, tag_ids)
 }
+
+
+#[cfg(test)]
+mod tests {
+pub mod test_tag_handlers;
+pub mod test_file_handlers;
+pub mod test_search_by_tags;
+}
+
+
+
+

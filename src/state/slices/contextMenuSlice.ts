@@ -19,6 +19,11 @@ export interface DirectoryEntityContextPayload {
     type: DirectoryContentType;
 }
 
+export interface TagContextPayload {
+    tagID: number;
+    tagName: string;
+}
+
 const initialState: ContextMenuState = { currentContextMenu: ContextMenuType.None, mouseX: 0, mouseY: 0, contextMenuPayload: {} };
 
 export const contextMenuSlice = createSlice({

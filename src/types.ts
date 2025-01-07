@@ -17,4 +17,5 @@ export enum ContextMenuType {
     None,
     General,
     DirectoryEntity,
+    TagEntity,
 }

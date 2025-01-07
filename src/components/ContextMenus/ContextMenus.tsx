@@ -18,7 +18,6 @@ export default function ContextMenus() {
     const [newDirectoryShown, setNewDirectoryShown] = useState(false);
     const [renameFileShown, setRenameFileShown] = useState(false);
 
-    // Typescript pain
     const directoryEntityPayload = contextMenuPayload as DirectoryEntityContextPayload;
     const generalPayload = contextMenuPayload as GeneralContextPayload;
 
@@ -86,18 +85,26 @@ export default function ContextMenus() {
             {currentContextMenu == ContextMenuType.General ? (
                 <ContextMenu options={[
                     { name: "New File", onClick: () => setNewFileShown(true) },
-                    { name: "New Folder", onClick: () => setNewDirectoryShown(true)}
+                    { name: "New Folder", onClick: () => setNewDirectoryShown(true) }
                 ]} />
             ) : currentContextMenu == ContextMenuType.DirectoryEntity ? (
                 <ContextMenu options={[
+                    { name: "Associate Tag", onClick: () => console.log("Associate a tag to this File") }, // Add tag-file logic
                     { name: "Rename", onClick: () => setRenameFileShown(true) },
-                    { name: "Delete", onClick: async () => onDelete()}
+                    { name: "Delete", onClick: async () => onDelete() }
+                ]} />
+            ) : currentContextMenu == ContextMenuType.TagEntity ? (
+                <ContextMenu options={[
+                    { name: "Update", onClick: () => console.log("Update Tag") }, // Add update logic
+                    { name: "Delete", onClick: async () => console.log("Delete Tag") } // Add delete logic
                 ]} />
             ) : ""}
-
+            
+            {/* Input Modals */}
             <InputModal shown={newFileShown} setShown={setNewFileShown} title="New File" onSubmit={onNewFile} submitName="Create" />
             <InputModal shown={newDirectoryShown} setShown={setNewDirectoryShown} title="New Folder" onSubmit={onNewFolder} submitName="Create" />
             <InputModal shown={renameFileShown} setShown={setRenameFileShown} title="Rename File" onSubmit={onRename} submitName="Rename" />
         </>
-    )
+    );
+    
 }

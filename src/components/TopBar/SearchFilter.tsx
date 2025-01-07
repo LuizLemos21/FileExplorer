@@ -58,6 +58,8 @@ export default function SearchFilter({ filters, setFilters }: Props) {
   };
 
   return (
+    <div className="space-x-2  bg-darker p-4 rounded-bl-lg rounded-br-lg w-62"> {/* div for the crate tags button */}
+
     <div className="space-x-2 flex justify-center bg-darker p-4 rounded-bl-lg rounded-br-lg w-62">
       <div className="flex flex-col space-y-2">
         <label>Extension</label>
@@ -106,9 +108,11 @@ export default function SearchFilter({ filters, setFilters }: Props) {
           className="absolute left-2 top-16"
           type="checkbox"
         />
-      </div>
 
-      {/* Create Tag Button */}
+        
+      </div>  
+    </div>
+          {/* Create Tag Button */}
       <button
         onClick={() => setShowCreateForm(true)}
         className="btn btn-primary mt-4"
@@ -123,6 +127,9 @@ export default function SearchFilter({ filters, setFilters }: Props) {
           onSuccess={() => refreshTagList()}
         />
       )}
-    </div>
+      </div>
+    
+
+    
   );
 }

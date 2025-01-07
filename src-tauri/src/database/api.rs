@@ -102,7 +102,7 @@ pub fn delete_tag(tag_id: i32) -> Result<(), ApiError> {
 pub fn register_file(name: String, path: String) -> Result<i32, String> {
     let conn = establish_connection().map_err(|e| e.to_string())?; 
         conn.execute(
-        "INSERT INTO files (name, path) VALUES (?1, ?2)",
+        "INSERT INTO files (name, file_path) VALUES (?1, ?2)",
         &[&name, &path],
     ).map_err(|e| e.to_string())?;
 
@@ -117,14 +117,14 @@ pub fn tag_file(name: String, path: String, tag_ids: Vec<i32>) -> Result<(), Str
     // Verificar se o arquivo já existe
     let file_id: i32 = conn
         .query_row(
-            "SELECT id FROM files WHERE path = ?1",
+            "SELECT id FROM files WHERE file_path = ?1",
             [&path],
             |row| row.get(0),
         )
         .unwrap_or_else(|_| {
             // Inserir o arquivo, se não existir
             conn.execute(
-                "INSERT INTO files (name, path) VALUES (?1, ?2)",
+                "INSERT INTO files (name, file_path) VALUES (?1, ?2)",
                 [&name, &path],
             )
             .expect("Failed to insert file");
@@ -163,6 +163,59 @@ pub fn search_files_by_tags(tag_ids: Vec<i32>) -> Result<Vec<File>, String> {
     let file_iter = stmt
         .query_map(params.as_slice(), |row| {            
                 Ok(File {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                file_path: row.get(2)?,
+            })
+        })
+        .map_err(|e| e.to_string())?;
+
+    Ok(file_iter.filter_map(Result::ok).collect())
+}
+
+// Function to search the files
+
+
+#[tauri::command]
+pub fn search_files(name: Option<String>, tag_ids: Option<Vec<i32>>) -> Result<Vec<File>, String> {
+    let conn = establish_connection().map_err(|e| e.to_string())?;
+
+    let mut query = String::from(
+        "SELECT DISTINCT f.id, f.name, f.file_path
+         FROM files f
+         LEFT JOIN tagged_files tf ON f.id = tf.file_id",
+    );
+
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+    // If searching by name
+    if let Some(name_filter) = name {
+        query.push_str(" WHERE f.name LIKE ?");
+        params.push(Box::new(format!("%{}%", name_filter)));
+    }
+
+    // If searching by tags
+    if let Some(tags) = tag_ids {
+        if !tags.is_empty() {
+            if params.is_empty() {
+                query.push_str(" WHERE");
+            } else {
+                query.push_str(" AND");
+            }
+            query.push_str(" tf.tag_id IN (");
+            query.push_str(&tags.iter().map(|_| "?").collect::<Vec<_>>().join(","));
+            query.push_str(")");
+            for tag in tags {
+                params.push(Box::new(tag));
+            }
+        }
+    }
+
+    // Prepare and execute the query
+    let mut stmt = conn.prepare(&query).map_err(|e| e.to_string())?;
+    let file_iter = stmt
+        .query_map(params.iter().map(|p| &**p).collect::<Vec<_>>().as_slice(), |row| {
+            Ok(File {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 file_path: row.get(2)?,

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, MouseEvent } from "react";
 import TagForm from "../Tags/TagForm";
-import ContextMenu from "../ContextMenus/ContextMenu";
 import { invoke } from "@tauri-apps/api/tauri";
-
+import { useAppDispatch, useAppSelector } from "../../state/hooks";
+import { updateContextMenu } from "../../state/slices/contextMenuSlice";
+import { ContextMenuType } from "../../types";
 
 interface Tag {
   id: number;
@@ -20,38 +21,10 @@ interface Props {
   refreshTagList: () => Promise<void>;
 }
 
-
 const TagList: React.FC<Props> = ({ availableTags, filters, setFilters, refreshTagList }) => {
-    const [editingTag, setEditingTag] = useState<Tag | null>(null); // State for the tag being edited
-    const [error, setError] = useState<string | null>(null);
-    const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
-
-
-
-  // Recursive function to render tags with indentation
-  const renderTags = (tags: Tag[], level = 0) => {
-    return tags.map((tag) => (
-      <div
-        key={tag.id}
-        style={{ marginLeft: `${level * 20}px` }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          setContextMenu({ x: e.clientX, y: e.clientY });        
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={filters.selectedTags.includes(tag.name)}
-          onChange={() => onTagChange(tag)}
-          className="mr-2"
-        />
-        <span>{tag.name}</span>
-        {tag.children && renderTags(tag.children, level + 1)}
-      </div>
-    ));
-  };
-
-
+  const [editingTag, setEditingTag] = useState<Tag | null>(null); // State for the tag being edited
+  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
 
   // Handle tag selection or deselection
   const onTagChange = (tag: Tag) => {
@@ -66,6 +39,43 @@ const TagList: React.FC<Props> = ({ availableTags, filters, setFilters, refreshT
     }
 
     setFilters({ ...filters, selectedTags: updatedTags });
+  };
+
+  // Recursive function to render tags with indentation
+  const renderTags = (tags: Tag[], level = 0) => {
+    return tags.map((tag) => (
+      <div
+        key={tag.id}
+        style={{ marginLeft: `${level * 20}px` }}
+        className="relative group hover:bg-gray-400 p-1"
+        onContextMenu={(e) => handleContextMenu(e, tag)} // Handle right-click
+      >
+        <input
+          type="checkbox"
+          checked={filters.selectedTags.includes(tag.name)}
+          onChange={() => onTagChange(tag)}
+          className="mr-2"
+        />
+        {/* <span>id: {tag.id} - name: </span>   Only for testing purposes */}
+        <span>{tag.name}</span>
+        {tag.children && renderTags(tag.children, level + 1)}
+      </div>
+    ));
+  };
+
+  // Handle context menu actions
+  const handleContextMenu = (e: MouseEvent<HTMLDivElement>, tag: Tag) => {
+    e.preventDefault();
+    e.stopPropagation(); //Prevents the event from reaching the General Context menu
+
+    dispatch(
+      updateContextMenu({
+        currentContextMenu: ContextMenuType.TagEntity,
+        mouseX: e.pageX,
+        mouseY: e.pageY,
+        contextMenuPayload: { tagId: tag.id, tagName: tag.name },
+      })
+    );
   };
 
   // Function to get all descendants of a tag
@@ -84,29 +94,43 @@ const TagList: React.FC<Props> = ({ availableTags, filters, setFilters, refreshT
     return tag.name === selectedTag || getAllDescendants(tag).some((descendant) => descendant.name === selectedTag);
   };
 
-  const handleDelete = async (tagId: number) => {
-    if (window.confirm("Are you sure you want to delete this tag?")) {
+  // Delete tag action
+
+
+  const handleDelete = async() => {
+    const { contextMenuPayload } = useAppSelector((state) => state.contextMenu); //Gets current payload
+    const dispatch = useAppDispatch;
+
+    if (!contextMenuPayload?.tagId){
+      console.error("No tagId found in context menu payload");
+      return;
+    }
+
+    const tagId = contextMenuPayload.tagId;
+    const tagName = contextMenuPayload.tagName;
+
+    if (window.confirm ('Are you sure you want to delete the tag "${tagName}"?')){
       try {
-        await invoke("delete_tag_handler", { tag_id: tagId });
+        //Call the backend handler to delete this tag
+        await invoke ("delete_tag_handler",{tag_id: tagId});
+
+        //Refresh the tag list
         await refreshTagList();
-      } catch (err) {
+
+        //clear the Context Menu
+
+        
+        console.log ('Tag "${tagName}" deleted sucessfully.');
+      }catch (err){
         console.error("Error deleting tag:", err);
-        alert("Failed to delete tag.");
+        alert("Failed to delete tag. Please try again");
       }
     }
-  };
+  }
 
   return (
     <div>
       {renderTags(availableTags)}
-      {ContextMenu && (
-        <ContextMenu
-          options={[
-            { name: "Update", onClick: () => setEditingTag(ContextMenu.tag) },
-            { name: "Delete", onClick: () => handleDelete(contextMenu.tag.id) },
-          ]}
-        />
-      )}
       {editingTag && (
         <TagForm
           tag={editingTag}
