@@ -7,6 +7,7 @@ mod errors;
 mod database;
 mod tagSearch;
 
+use tagSearch::search_by_tags;
 use filesystem::explorer::{open_file, open_directory, create_file, create_directory, rename_file, delete_file};
 use filesystem::volume::get_volumes;
 use rayon::result;
@@ -15,9 +16,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use database::api::{create_tag, delete_tag, get_tags, register_file, tag_file, update_tag};
+use database::api::{create_tag, delete_tag, get_tags, register_file, tag_file, update_tag, get_tags_by_file};
 use errors::ApiError;
-
+use tauri::State;
 
 
 #[derive(Serialize, Deserialize)]
@@ -33,6 +34,8 @@ pub type VolumeCache = HashMap<String, Vec<CachedPath>>;
 #[derive(Default)]
 pub struct AppState {
     system_cache: HashMap<String, VolumeCache>,
+    pub conn: Option<rusqlite::Connection>,
+
 }
 
 pub type StateSafe = Arc<Mutex<AppState>>;
@@ -54,7 +57,8 @@ async fn main() {
             update_tag_handler,
             delete_tag_handler,
             tag_file_handler,
-            get_tags_hierarchy_handler
+            get_tags_hierarchy_handler,
+            get_tags_by_file_handler,
         ])
         .manage(Arc::new(Mutex::new(AppState::default())))
         .run(tauri::generate_context!())
@@ -76,6 +80,7 @@ async fn get_tags_handler() -> Result<Vec<database::api::Tag>, String> {
     }
 }
 
+
 #[tauri::command]
 async fn get_tags_hierarchy_handler() -> Result<Vec<database::api::Tag>, String> {
     database::api::get_tags_hierarchically().map_err(|e| e.to_string())
@@ -83,11 +88,13 @@ async fn get_tags_hierarchy_handler() -> Result<Vec<database::api::Tag>, String>
 
 #[tauri::command]
 async fn update_tag_handler(tag_id: i32, new_name: String, parent_id: Option<i32>) -> Result<(), String> {
+    println!("update_tag_handler called with tag_id: {}, new_name: {}, parent_id: {:?}", tag_id, new_name, parent_id);
     update_tag(tag_id, new_name, parent_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 async fn delete_tag_handler(tag_id: i32) -> Result<(), String> {
+    println!("delete_tag_handler called with tag_id: {}", tag_id);
     delete_tag(tag_id).map_err(|e| e.to_string())
 }
 
@@ -98,11 +105,18 @@ async fn register_file_handler(name: String, path: String) -> Result<i32, String
 
 }
 
+#[tauri::command]
+async fn get_tags_by_file_handler(file_id: i32) -> Result<Vec<database::api::Tag>, String> {
+    database::api::get_tags_by_file(file_id).map_err(|e| e.to_string())
+}
 
 #[tauri::command]
 async fn tag_file_handler(name: String, path: String, tag_ids: Vec<i32>) -> Result<(), String> {
     tag_file(name, path, tag_ids)
 }
+
+
+
 
 
 #[cfg(test)]

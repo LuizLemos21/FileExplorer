@@ -8,6 +8,9 @@ interface Props {
     onSubmit: (value: string) => unknown;
     shown: boolean;
     setShown: (shown: boolean) => unknown;
+    children: React.ReactNode; // Add this line
+      
+      
 }
 
 export default function InputModal({ shown, setShown, title, onSubmit, submitName }: Props) {

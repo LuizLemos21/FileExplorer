@@ -2,7 +2,6 @@ import React, { ChangeEvent, Dispatch, SetStateAction, useEffect, useState } fro
 import Input, { InputSize } from "../../ui/Input";
 import { ISearchFilter } from "./SearchBar";
 import { invoke } from "@tauri-apps/api/tauri";
-import TagForm from '../Tags/TagForm';
 import TagList from '../Tags/TagList';
 
 interface Tag {
@@ -112,21 +111,7 @@ export default function SearchFilter({ filters, setFilters }: Props) {
         
       </div>  
     </div>
-          {/* Create Tag Button */}
-      <button
-        onClick={() => setShowCreateForm(true)}
-        className="btn btn-primary mt-4"
-      >
-        Create New Tag
-      </button>
 
-      {/* Show the Create Tag Form */}
-      {showCreateForm && (
-        <TagForm
-          onClose={() => setShowCreateForm(false)}
-          onSuccess={() => refreshTagList()}
-        />
-      )}
       </div>
     
 

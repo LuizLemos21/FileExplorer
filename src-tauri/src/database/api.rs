@@ -2,6 +2,9 @@ use rusqlite::Connection;
 use crate::errors::ApiError;
 use rusqlite::params;
 use serde::Serialize;
+use std::sync::{Arc, Mutex};
+use crate::AppState;
+
 
 #[derive(Serialize)]
 pub struct Tag {
@@ -17,16 +20,17 @@ pub struct File {
     pub file_path: String,
 }
 
-
 use std::env;
-
-fn establish_connection() -> Result<rusqlite::Connection, ApiError> {
-    let db_path = env::current_dir()
+//Establish Connection
+fn establish_connection() -> Result<Connection, ApiError> {
+    let db_path = std::env::current_dir()
         .expect("Failed to get current directory")
         .join("src/database/database.db");
-    rusqlite::Connection::open(db_path)
-        .map_err(|e| ApiError::ConnectionError(e.to_string()))
+    Connection::open(db_path).map_err(|e| ApiError::ConnectionError(e.to_string()))
+
 }
+
+// Refresh the database
 
 
 // Create Tag
@@ -224,4 +228,34 @@ pub fn search_files(name: Option<String>, tag_ids: Option<Vec<i32>>) -> Result<V
         .map_err(|e| e.to_string())?;
 
     Ok(file_iter.filter_map(Result::ok).collect())
+}
+
+
+//obter todas as tags associadas a um arquivo
+pub fn get_tags_by_file(file_id: i32) -> Result<Vec<Tag>, ApiError> {
+    let conn = establish_connection()?;
+
+    // Consulta para obter as tags associadas ao arquivo
+    let query = "
+        SELECT t.id, t.name, t.parent_id
+        FROM tags t
+        INNER JOIN tagged_files tf ON t.id = tf.tag_id
+        WHERE tf.file_id = ?1
+    ";
+
+    let mut stmt = conn.prepare(query).map_err(|e| ApiError::QueryError(e.to_string()))?;
+
+    // Mapeando os resultados para a estrutura `Tag`
+    let tags_iter = stmt.query_map(params![file_id], |row| {
+        Ok(Tag {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            parent_id: row.get(2)?,
+        })
+    }).map_err(|e| ApiError::QueryError(e.to_string()))?;
+
+    // Convertendo o iterador em um vetor
+    let tags: Vec<Tag> = tags_iter.filter_map(Result::ok).collect();
+
+    Ok(tags)
 }

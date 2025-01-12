@@ -20,7 +20,7 @@ export interface DirectoryEntityContextPayload {
 }
 
 export interface TagContextPayload {
-    tagID: number;
+    tagId: number;
     tagName: string;
 }
 
