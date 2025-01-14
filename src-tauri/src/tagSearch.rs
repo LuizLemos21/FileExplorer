@@ -1,5 +1,6 @@
 use crate::database::api::{search_files_by_tags, File};
 use tauri::State;
+use std::collections::HashMap;
 
 /// Performs a search based on selected tags.
 /// Allows optional refinement by filename within the results.
@@ -7,7 +8,7 @@ use tauri::State;
 pub async fn search_by_tags(
     tag_ids: Vec<i32>,
     filename_filter: Option<String>,
-) -> Result<Vec<File>, String> {
+) -> Result<HashMap<String, (String, String)>, String> {
     // Query files associated with the selected tags
     let mut results = search_files_by_tags(tag_ids)?;
 
@@ -20,5 +21,14 @@ pub async fn search_by_tags(
             .collect();
     }
 
-    Ok(results)
+    // Transform results into the expected format
+    let mut directory_contents = HashMap::new();
+    for file in results {
+        directory_contents.insert(
+            file.file_path.clone(),
+            ("File".to_string(), file.name.clone()),
+        );
+    }
+
+    Ok(directory_contents)
 }

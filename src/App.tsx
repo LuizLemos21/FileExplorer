@@ -92,6 +92,8 @@ function App() {
 
   const [handleMainContextMenu, handleCloseContextMenu] = useContextMenu(dispatch, pathHistory[historyPlace]);
 
+
+
   return (
     <div className="h-full" onClick={(e) => {
       handleCloseContextMenu(e);

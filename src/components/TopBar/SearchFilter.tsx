@@ -71,7 +71,7 @@ export default function SearchFilter({ filters, setFilters }: Props) {
           availableTags={availableTags}
           filters={filters}
           setFilters={setFilters}
-          refreshTagList={refreshTagList}
+          //refreshTagList={refreshTagList}
         />
       </div>
 

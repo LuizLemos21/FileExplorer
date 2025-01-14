@@ -59,6 +59,7 @@ async fn main() {
             tag_file_handler,
             get_tags_hierarchy_handler,
             get_tags_by_file_handler,
+            search_by_tags
         ])
         .manage(Arc::new(Mutex::new(AppState::default())))
         .run(tauri::generate_context!())

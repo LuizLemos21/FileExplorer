@@ -26,9 +26,9 @@ async fn test_register_file_handler() {
 
 #[tokio::test]
 async fn test_tag_file_handler() {
-    let file_name = "2019.prproj".to_string();
-    let file_path = "C:/Users/luizf_nxc87sj/Desktop/2019.prproj".to_string();
-    let tag_ids = vec![1, 2]; // Replace with valid tag IDs
+    let file_name = "testpicture (8).png".to_string();
+    let file_path = "C:/Users/luizf_nxc87sj/Documents/GitHub/FileExplorer/testfiles/testpicture (8).png".to_string();
+    let tag_ids = vec![11, 2, 3]; // Replace with valid tag IDs
 
     let result = tag_file_handler(file_name, file_path, tag_ids).await;
 

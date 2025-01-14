@@ -20,7 +20,6 @@ interface Props {
     selectedTags: string[];
   };
   setFilters: (filters: any) => void;
-  
 }
 
 const TagList: React.FC<Props> = ({ availableTags, filters, setFilters }) => {
@@ -28,35 +27,34 @@ const TagList: React.FC<Props> = ({ availableTags, filters, setFilters }) => {
   const [editingTag, setEditingTag] = useState<Tag | null>(null); // State for the tag being edited
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false); // State for the create tag modal
   const [newTagName, setNewTagName] = useState<string>("");
-  //const setAvailableTags = useState<Tag[]>([])[1];
   const [selectedParentTag, setSelectedParentTag] = useState<Tag | null>(null);
 
-
-
-  const [parentTag, setParentTag] = useState<Tag | null>(null);
-  const [showInput, setShowInput] = useState<boolean>(false);
-  const [showParentSelector, setShowParentSelector] = useState<boolean>(false);
-
-  const [error, setError] = useState<string | null>(null);
-
-
-
-  // Handle tag selection or deselection
   const onTagChange = (tag: Tag) => {
     let updatedTags = [...filters.selectedTags];
 
-    // If the tag is already selected, deselect it and all its children
-    if (updatedTags.includes(tag.name)) {
-      updatedTags = updatedTags.filter((t) => !isTagOrDescendant(tag, t));
+    if (updatedTags.includes(tag.id.toString())) {
+      updatedTags = updatedTags.filter((t) => !isTagOrDescendant(tag, parseInt(t)));
     } else {
-      // If the tag is not selected, select it and all its children
-      updatedTags = [...updatedTags, ...getAllDescendants(tag).map((t) => t.name)];
+      updatedTags = [...updatedTags, ...getAllDescendants(tag).map((t) => t.id.toString())];
     }
 
     setFilters({ ...filters, selectedTags: updatedTags });
   };
 
-  // Recursive function to render tags with indentation
+  const getAllDescendants = (tag: Tag): Tag[] => {
+    let descendants: Tag[] = [tag];
+    if (tag.children) {
+      tag.children.forEach((child) => {
+        descendants = descendants.concat(getAllDescendants(child));
+      });
+    }
+    return descendants;
+  };
+
+  const isTagOrDescendant = (tag: Tag, selectedTagId: number) => {
+    return tag.id === selectedTagId || getAllDescendants(tag).some((descendant) => descendant.id === selectedTagId);
+  };
+
   const renderTags = (tags: Tag[], level = 0) => {
     return tags.map((tag) => (
       <div
@@ -67,18 +65,16 @@ const TagList: React.FC<Props> = ({ availableTags, filters, setFilters }) => {
       >
         <input
           type="checkbox"
-          checked={filters.selectedTags.includes(tag.name)}
+          checked={filters.selectedTags.includes(tag.id.toString())}
           onChange={() => onTagChange(tag)}
           className="mr-2"
         />
-        {/* <span>id: {tag.id} - name: </span>   Only for testing purposes */}
         <span>{tag.name}</span>
         {tag.children && renderTags(tag.children, level + 1)}
       </div>
     ));
   };
 
-  // Handle context menu actions
   const handleContextMenu = (e: MouseEvent<HTMLDivElement>, tag: Tag) => {
     e.preventDefault();
     e.stopPropagation(); //Prevents the event from reaching the General Context menu
@@ -93,94 +89,7 @@ const TagList: React.FC<Props> = ({ availableTags, filters, setFilters }) => {
     );
   };
 
-
-  // Function to get all descendants of a tag
-  const getAllDescendants = (tag: Tag): Tag[] => {
-    let descendants: Tag[] = [tag];
-    if (tag.children) {
-      tag.children.forEach((child) => {
-        descendants = [...descendants, ...getAllDescendants(child)];
-      });
-    }
-    return descendants;
-  };
-
-  // Function to check if a tag or one of its descendants is selected
-  const isTagOrDescendant = (tag: Tag, selectedTag: string) => {
-    return tag.name === selectedTag || getAllDescendants(tag).some((descendant) => descendant.name === selectedTag);
-  };
-
-
-  const handleCreateTag = async () => {
-    console.log("Creating tag with name:", newTagName, "and parent ID:", selectedParentTag?.id);
-
-    try {
-      await invoke("create_tag_handler", { name: newTagName, parent_id: selectedParentTag?.id });
-      setShowCreateModal(false);
-      setNewTagName("");
-      setSelectedParentTag(null);
-      //refreshTagList();
-    } catch (e) {
-      alert(e);
-    }
-  }
-
-  return (
-    <div>
-      {renderTags(availableTags)}
-      <button onClick={() => setShowCreateModal(true)} className="btn btn-primary mt-2">
-        Create New Tag
-      </button>
-      {editingTag && (
-        <TagForm
-          tag={editingTag}
-          onClose={() => setEditingTag(null)}
-          onSuccess={() => {
-            setEditingTag(null);
-            // refreshTagList(); implement this function
-          }}
-        />
-      )}
-      {showCreateModal && (
-        <InputModal
-          shown={showCreateModal}
-          setShown={setShowCreateModal}
-          title="Create New Tag"
-          onSubmit={handleCreateTag}
-          submitName="Create"
-        >
-          <input
-            type="text"
-            value={newTagName}
-            onChange={(e) => {
-              console.log("New tag name:", e.target.value); // Debugging statement
-              setNewTagName(e.target.value);
-            }}
-            placeholder="Tag Name"
-            className="block w-full mb-2"
-          />
-          <div className="block w-full mb-2">
-            <label>Select Parent Tag:</label>
-            <select
-              value={selectedParentTag?.id || ""}
-              onChange={(e) => {
-                const selectedTag = availableTags.find((tag) => tag.id === parseInt(e.target.value));
-                setSelectedParentTag(selectedTag || null);
-              }}
-              className="block w-full"
-            >
-              <option value="">None</option>
-              {availableTags.map((tag) => (
-                <option key={tag.id} value={tag.id}>
-                  {tag.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </InputModal>
-      )}
-    </div>
-  );
+  return <div>{renderTags(availableTags)}</div>;
 };
 
 export default TagList;

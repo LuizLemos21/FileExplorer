@@ -55,6 +55,23 @@ export default function SearchBar({
     setSearchResults(results);
   }
 
+  async function onTagSearch() {
+    console.log("Selected tags:", searchFilter.selectedTags); // Debugging statement
+    const tagIds = searchFilter.selectedTags.map(tag => parseInt(tag)).filter(tag => !isNaN(tag));
+    console.log("Tag IDs:", tagIds); // Debugging statement
+    if (tagIds.length === 0) {
+      alert("Please select at least one tag before searching.");
+      return;
+    }
+
+    const results = await invoke<DirectoryContent[]>("search_by_tags", {
+      tagIds,
+      filename_filter: searchValue,
+    });
+
+    setSearchResults(results);
+  }
+  
   return (
     <div className="absolute right-4 top-4">
       <Input
@@ -66,6 +83,7 @@ export default function SearchBar({
         size={InputSize.Large}
       />
       <SearchFilter filters={searchFilter} setFilters={setSearchFilter} />
+      <button onClick={onTagSearch}>Search by Tags</button>
     </div>
   );
 }
