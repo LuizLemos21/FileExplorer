@@ -1,16 +1,19 @@
 use crate::database::api::{search_files_by_tags, File};
+use crate::filesystem::volume::DirectoryChild;
 use tauri::State;
-use std::collections::HashMap;
+use std::time::Instant;
 
-/// Performs a search based on selected tags.
-/// Allows optional refinement by filename within the results.
+// Performs a search based on selected tags
+//  Returns results in a format compatible with the DirectoryContents component.
 #[tauri::command]
 pub async fn search_by_tags(
-    tag_ids: Vec<i32>,
+    tagIds: Vec<i32>,
     filename_filter: Option<String>,
-) -> Result<HashMap<String, (String, String)>, String> {
+) -> Result<Vec<DirectoryChild>, String> {
+    let start_time = Instant::now(); //start timer
+
     // Query files associated with the selected tags
-    let mut results = search_files_by_tags(tag_ids)?;
+    let mut results = search_files_by_tags(tagIds)?;
 
     // If a filename filter is provided, apply it
     if let Some(filter) = filename_filter {
@@ -21,14 +24,15 @@ pub async fn search_by_tags(
             .collect();
     }
 
-    // Transform results into the expected format
-    let mut directory_contents = HashMap::new();
-    for file in results {
-        directory_contents.insert(
-            file.file_path.clone(),
-            ("File".to_string(), file.name.clone()),
-        );
-    }
-
+    // Transform results into DirectoryContent format
+    let directory_contents: Vec<DirectoryChild> = results
+        .into_iter()
+        .map(|file| {
+            // Assuming DirectoryChild::File(name, path) is the correct variant
+            DirectoryChild::File(file.name, file.file_path)
+        })
+        .collect();
+    let end_time = Instant::now(); // End timing
+    println!("Elapsed time for tag search: {:?}", end_time - start_time);    
     Ok(directory_contents)
 }
